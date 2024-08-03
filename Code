@@ -1,0 +1,104 @@
+# Step 1: Data Preparation
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn import svm
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import GridSearchCV
+
+# Load the Parkinson's dataset
+parkinson_data = pd.read_csv('../input/parkinsons-dataset/parkinsons.data')
+
+# Explore Data, Handle Missing Values, Split Data, Feature Engineering
+print(parkinson_data.shape)
+print(parkinson_data.info())
+print(parkinson_data.isnull().sum())
+print(parkinson_data.describe())
+
+# Distribution of Target Variable
+print(parkinson_data['status'].value_counts())
+
+# Independent & Dependent Variables
+x = parkinson_data.drop(columns=['name', 'status'], axis=1)
+y = parkinson_data['status']
+
+# Split the data into training and testing sets
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=2)
+
+# Step 2: Model Training
+# SVM
+svm_model = svm.SVC(kernel='linear')
+svm_model.fit(x_train, y_train)
+
+# KNN
+knn_model = KNeighborsClassifier()
+knn_model.fit(x_train, y_train)
+
+# Logistic Regression
+log_reg_model = LogisticRegression(random_state=42)
+log_reg_model.fit(x_train, y_train)
+
+# Step 3: Hyperparameter Tuning
+# SVM
+svm_param_grid = {'C': [0.001, 0.01, 0.1, 1, 10, 100]}
+svm_grid_search = GridSearchCV(svm_model, svm_param_grid, cv=5, scoring='accuracy')
+svm_grid_search.fit(x_train, y_train)
+best_svm_model = svm_grid_search.best_estimator_
+
+# KNN
+knn_param_grid = {'n_neighbors': [3, 5, 7, 9, 11]}
+knn_grid_search = GridSearchCV(knn_model, knn_param_grid, cv=5, scoring='accuracy')
+knn_grid_search.fit(x_train, y_train)
+best_knn_model = knn_grid_search.best_estimator_
+
+# Logistic Regression
+log_reg_param_grid = {'C': [0.001, 0.01, 0.1, 1, 10, 100]}
+log_reg_grid_search = GridSearchCV(log_reg_model, log_reg_param_grid, cv=5, scoring='accuracy')
+log_reg_grid_search.fit(x_train, y_train)
+best_log_reg_model = log_reg_grid_search.best_estimator_
+
+# Step 4: Model Evaluation & Selection
+# Evaluate the models
+svm_train_accuracy = best_svm_model.score(x_train, y_train)
+svm_test_accuracy = best_svm_model.score(x_test, y_test)
+knn_train_accuracy = best_knn_model.score(x_train, y_train)
+knn_test_accuracy = best_knn_model.score(x_test, y_test)
+log_reg_train_accuracy = best_log_reg_model.score(x_train, y_train)
+log_reg_test_accuracy = best_log_reg_model.score(x_test, y_test)
+
+# Select the best model based on evaluation
+best_accuracy = max(svm_test_accuracy, knn_test_accuracy, log_reg_test_accuracy)
+best_model = None
+if best_accuracy == svm_test_accuracy:
+    best_model = best_svm_model
+elif best_accuracy == knn_test_accuracy:
+    best_model = best_knn_model
+else:
+    best_model = best_log_reg_model
+
+# Predictive System
+input_data = (244.99000, 272.21000, 239.17000, 0.00451, 0.00002, 0.00279, 0.00237, 0.00837, 0.01897, 
+              0.18100, 0.01084, 0.01121, 0.01255, 0.03253, 0.01049, 21.52800, 0.522812, 0.646818, 
+              -7.304500, 0.171088, 2.095237, 0.096220)
+
+# Changing input data to a numpy array
+input_data_as_numpy_array = np.asarray(input_data)
+
+# Reshape the numpy array
+input_data_reshaped = input_data_as_numpy_array.reshape(1, -1)
+
+# Standardize the data
+scaler = StandardScaler()
+std_data = scaler.transform(input_data_reshaped)
+
+# Make prediction using the best model
+prediction = best_model.predict(std_data)
+
+print(prediction)
+if prediction[0] == 0:
+    print("Person is healthy")
+else:
+    print("Person is unhealthy")
